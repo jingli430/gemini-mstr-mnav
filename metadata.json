@@ -1,0 +1,5 @@
+{
+  "name": "MSTR MNAV Tracker",
+  "description": "Calculate and track MicroStrategy (MSTR) Net Asset Value (NAV) premium/discount with daily iPhone notification setup.",
+  "requestFramePermissions": []
+}
