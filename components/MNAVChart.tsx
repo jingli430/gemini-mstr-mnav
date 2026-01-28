@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   XAxis, 
   YAxis, 
@@ -7,8 +7,7 @@ import {
   Tooltip, 
   ResponsiveContainer, 
   AreaChart, 
-  Area,
-  Line
+  Area
 } from 'recharts';
 import { MSTRDataPoint } from '../types';
 
@@ -18,7 +17,6 @@ interface Props {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    // Safely extract the data point from the first payload item
     const data = payload[0].payload as MSTRDataPoint;
     return (
       <div className="bg-[#1c2128] border border-gray-700 p-3 rounded-lg shadow-xl text-sm">
@@ -42,6 +40,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const MNAVChart: React.FC<Props> = ({ data }) => {
+  // 计算 MNAV 倍数的理想显示范围，增加 10% 的上下缓冲空间
+  // Fix: Use any to satisfy Recharts YAxis domain type which can be picky about mixed tuples
+  const yDomain: any = useMemo(() => {
+    if (!data || data.length === 0) return [0, 'auto'];
+    const values = data.map(d => d.mnavRatio);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const padding = (max - min) * 0.15;
+    return [Math.max(0, min - padding), max + padding];
+  }, [data]);
+
   return (
     <div className="h-[400px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -64,10 +73,14 @@ export const MNAVChart: React.FC<Props> = ({ data }) => {
             axisLine={false} 
             tickLine={false} 
             tick={{ fill: '#8b949e', fontSize: 11 }}
-            domain={['auto', 'auto']}
+            domain={yDomain}
             orientation="right"
+            tickFormatter={(val) => `${val.toFixed(2)}x`}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }} />
+          <Tooltip 
+            content={<CustomTooltip />} 
+            cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }} 
+          />
           <Area 
             type="monotone" 
             dataKey="mnavRatio" 
@@ -77,16 +90,10 @@ export const MNAVChart: React.FC<Props> = ({ data }) => {
             fill="url(#colorMnav)" 
             name="MNAV Ratio"
             animationDuration={1000}
+            isAnimationActive={true}
           />
-          {/* Include Line for the tooltip to find the data, even if it's visually hidden or just used for context */}
-          <Line 
-            type="monotone" 
-            dataKey="premium" 
-            stroke="transparent" 
-            dot={false}
-            activeDot={false}
-            name="Premium %"
-          />
+          {/* 注意：不再在这里添加 premium 的 Line，因为它会干扰 Y 轴的 auto 缩放，
+              因为 premium 的数值（通常为 100-300）远大于 mnavRatio（通常为 1-5） */}
         </AreaChart>
       </ResponsiveContainer>
     </div>
